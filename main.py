@@ -2,6 +2,7 @@ import blocking
 import argparse
 import socket
 import utils
+import logging
 
 def interactive_mode(firewall):
     """Run the firewall in interactive mode"""
@@ -14,6 +15,8 @@ def interactive_mode(firewall):
     
     print("\n--- System Firewall Interactive Mode ---")
     print("Type 'help' for available commands")
+
+    load = logging.connectionlogger
     
     while True:
         try:

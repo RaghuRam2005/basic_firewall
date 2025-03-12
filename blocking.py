@@ -3,7 +3,6 @@ import threading
 import time
 import json
 import os
-import datetime
 import signal
 import sys
 from collections import defaultdict
@@ -222,55 +221,8 @@ class SystemFirewall:
                     print(f"Windows Firewall rules added for IP {ip}")
             except subprocess.CalledProcessError as e:
                 print(f"Error applying Windows Firewall rule: {e}")
-                
-        elif self.os_type == "Linux":
-            # Linux iptables
-            try:
-                # Check if iptables is available
-                result = subprocess.run("which iptables", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                if result.returncode == 0:
-                    # Block incoming traffic from the IP
-                    cmd_in = f"iptables -A INPUT -s {ip} -j DROP"
-                    # Block outgoing traffic to the IP
-                    cmd_out = f"iptables -A OUTPUT -d {ip} -j DROP"
-                    
-                    subprocess.run(cmd_in, shell=True, check=True)
-                    subprocess.run(cmd_out, shell=True, check=True)
-                    print(f"iptables rules added for IP {ip}")
-                else:
-                    print("iptables not found on this system")
-            except subprocess.CalledProcessError as e:
-                print(f"Error applying iptables rule: {e}")
-                
-        elif self.os_type == "Darwin":  # macOS
-            # macOS pf firewall
-            try:
-                # Check if pf is enabled
-                result = subprocess.run("pfctl -s info", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                if result.returncode == 0:
-                    # Create or update pf rules
-                    pf_file = "/etc/pf.conf"
-                    block_rule = f"block in from {ip} to any\nblock out from any to {ip}"
-                    
-                    # Append to pf.conf if we have permission, otherwise just print instructions
-                    try:
-                        with open(pf_file, 'a') as f:
-                            f.write(f"\n# Added by Python Firewall\n{block_rule}\n")
-                        
-                        # Reload pf
-                        subprocess.run("pfctl -f /etc/pf.conf", shell=True, check=True)
-                        print(f"macOS pf rules added for IP {ip}")
-                    except PermissionError:
-                        print(f"Need root privileges to modify {pf_file}")
-                        print(f"Manually add these rules to {pf_file}:")
-                        print(block_rule)
-                else:
-                    print("pf firewall not enabled on this system")
-            except subprocess.CalledProcessError as e:
-                print(f"Error applying pf rule: {e}")
-        
         else:
-            print(f"Unsupported operating system: {self.os_type}")
+            print(f"Unsporrted operating system {self.os_type}")
     
     def remove_ip_block(self, ip):
         """Remove IP blocking rule from system firewall"""
@@ -288,25 +240,6 @@ class SystemFirewall:
                 print(f"Windows Firewall rules removed for IP {ip}")
             except subprocess.CalledProcessError as e:
                 print(f"Error removing Windows Firewall rule: {e}")
-                
-        elif self.os_type == "Linux":
-            # Linux iptables
-            try:
-                # Remove incoming rule
-                cmd_in = f"iptables -D INPUT -s {ip} -j DROP"
-                # Remove outgoing rule
-                cmd_out = f"iptables -D OUTPUT -d {ip} -j DROP"
-                
-                subprocess.run(cmd_in, shell=True, check=True)
-                subprocess.run(cmd_out, shell=True, check=True)
-                print(f"iptables rules removed for IP {ip}")
-            except subprocess.CalledProcessError as e:
-                print(f"Error removing iptables rule: {e}")
-                
-        elif self.os_type == "Darwin":  # macOS
-            print("For macOS, manual rule removal is required:")
-            print(f"Edit /etc/pf.conf and remove the lines blocking {ip}")
-            print("Then run: sudo pfctl -f /etc/pf.conf")
         
         else:
             print(f"Unsupported operating system: {self.os_type}")
@@ -323,30 +256,8 @@ class SystemFirewall:
         else:
             print(f"Could not resolve {hostname} to an IP address")
             
-            # Add the site to /etc/hosts on Linux and macOS
-            if self.os_type in ["Linux", "Darwin"]:
-                try:
-                    hosts_file = "/etc/hosts"
-                    hosts_entry = f"127.0.0.1 {hostname} www.{hostname}"
-                    
-                    # Check if entry already exists
-                    with open(hosts_file, 'r') as f:
-                        content = f.read()
-                    
-                    if hostname not in content:
-                        try:
-                            with open(hosts_file, 'a') as f:
-                                f.write(f"\n{hosts_entry}\n")
-                            print(f"Added {hostname} to {hosts_file}")
-                        except PermissionError:
-                            print(f"Need root privileges to modify {hosts_file}")
-                            print(f"Manually add this line to {hosts_file}:")
-                            print(hosts_entry)
-                except Exception as e:
-                    print(f"Error modifying hosts file: {e}")
-            
             # Add the site to hosts file on Windows
-            elif self.os_type == "Windows":
+            if self.os_type == "Windows":
                 try:
                     hosts_file = r"C:\Windows\System32\drivers\etc\hosts"
                     hosts_entry = f"127.0.0.1 {hostname} www.{hostname}"
@@ -366,6 +277,8 @@ class SystemFirewall:
                             print(hosts_entry)
                 except Exception as e:
                     print(f"Error modifying hosts file: {e}")
+            else:
+                print(f"Unsupported operating system {self.os_type}")
     
     def remove_site_block(self, hostname):
         """Remove site blocking rules"""
@@ -400,97 +313,7 @@ class SystemFirewall:
             except Exception as e:
                 print(f"Error modifying hosts file: {e}")
     
-    def log_connection(self, src_ip, dest_host, dest_port, action):
-        """Log a connection attempt"""
-        log_entry = {
-            "timestamp": datetime.datetime.now().isoformat(),
-            "src_ip": src_ip,
-            "dest_host": dest_host,
-            "dest_port": dest_port,
-            "action": action
-        }
-        
-        if self.logging_active:
-            current_time = datetime.datetime.now()
-            if (self.logging_start_time is None or current_time >= self.logging_start_time) and \
-               (self.logging_end_time is None or current_time <= self.logging_end_time):
-                self.logs.append(log_entry)
-                print(f"Logged: {src_ip} → {dest_host}:{dest_port} - {action}")
-    
-    def start_logging(self, start_time=None, end_time=None):
-        """Start logging connections"""
-        self.logging_active = True
-        self.logging_start_time = datetime.datetime.today()
-        print(f"Logging started from {datetime.date.today()} until {end_time if end_time else 'stopped manually'}")
-        
-        self.start_netstat_monitoring()
-    
-    def start_netstat_monitoring(self):
-        """Start monitoring connections on Windows using netstat"""
-        def monitor_thread():
-            while self.logging_active:
-                try:
-                    # Run netstat to get current connections
-                    output = subprocess.check_output("netstat -n", shell=True).decode('utf-8')
-                    lines = output.strip().split('\n')
-                    
-                    # Skip header lines
-                    for line in lines[4:]:
-                        parts = line.split()
-                        if len(parts) >= 2:
-                            # Parse the local and remote address
-                            if parts[1] == 'ESTABLISHED':
-                                local = parts[2].split(':')
-                                remote = parts[3].split(':')
-                                
-                                if len(local) >= 2 and len(remote) >= 2:
-                                    src_ip = local[0]
-                                    dest_ip = remote[0]
-                                    dest_port = remote[1]
-                                    
-                                    # Try to resolve the hostname
-                                    dest_host = dest_ip
-                                    try:
-                                        hostname, _, _ = socket.gethostbyaddr(dest_ip)
-                                        dest_host = hostname
-                                    except Exception:
-                                        pass
-                                    
-                                    # Check if this connection should be blocked
-                                    action = "ALLOWED"
-                                    if self.is_ip_blocked(dest_ip) or self.is_site_blocked(dest_host):
-                                        action = "BLOCKED"
-                                    
-                                    self.log_connection(src_ip, dest_host, dest_port, action)
-                    
-                    # Sleep to avoid consuming too many resources
-                    time.sleep(1)
-                except Exception as e:
-                    print(f"Error monitoring connections: {e}")
-                    time.sleep(5)  # Wait before retrying
-        
-        # Start the monitoring thread
-        thread = threading.Thread(target=monitor_thread)
-        thread.daemon = True
-        thread.start()
-    
-    def stop_logging(self):
-        """Stop logging connections"""
-        self.logging_active = False
-        print("Logging stopped")
-        
-        if self.logs:
-            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            log_file = f"firewall_logs_{timestamp}.json"
-            
-            try:
-                with open(log_file, 'w') as f:
-                    json.dump(self.logs, f, indent=4)
-                print(f"Logs saved to {log_file}")
-                self.logs = []
-            except Exception as e:
-                print(f"Error saving logs: {e}")
-    
+
     def apply_all_rules(self):
         """Apply all configured rules to the system firewall"""
         print("Applying all configured firewall rules...")
@@ -505,7 +328,7 @@ class SystemFirewall:
         
         print("All rules applied.")
     
-    def handle_shutdown(self, sig, frame):
+    def handle_shutdown(self):
         """Handle graceful shutdown"""
         print("\nShutting down firewall...")
         if self.logging_active:

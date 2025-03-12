@@ -58,3 +58,4 @@ def save_config(config, config_file):
         print(f"Error saving configuration: {e}")
         return config
     
+

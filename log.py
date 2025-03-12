@@ -1,12 +1,6 @@
 import csv
 import datetime
-import json
-import socket
-import subprocess
-import threading
-import re
-import time
-import logging
+import monitering
 
 class ConnectionLogger:
     def __init__(self):
@@ -26,7 +20,10 @@ class ConnectionLogger:
         self.logging_active = True
         print(f"stared logging from {datetime.datetime.now()}")
 
-        start_monitering()
+        moniter = monitering.NetstatMonitor()
+        moniter.start_packet_sniffing()
+
+    
 
 
     
