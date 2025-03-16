@@ -1,3 +1,6 @@
 __pycache__
 firewall_config.json
 test.py
+src\connection_logs.csv
+logs\*
+logs
