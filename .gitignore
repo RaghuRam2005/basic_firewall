@@ -4,3 +4,4 @@ test.py
 src\connection_logs.csv
 logs\*
 logs
+.env

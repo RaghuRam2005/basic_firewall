@@ -1,5 +1,8 @@
 import csv
 import datetime
+from dotenv import load_dotenv
+
+path = load_dotenv("LOG_PATH")
 
 class ConnectionLogger:
     def __init__(self):
@@ -7,7 +10,7 @@ class ConnectionLogger:
         self.logging_active = False
         self.is_logging = False
         self.monitor = None  # Will be set from outside
-        self.file_name = ".\\logs\\connection_logs.csv"
+        self.file_name = path
 
     def set_monitor(self, monitor):
         """Set the monitor reference without creating a circular dependency"""

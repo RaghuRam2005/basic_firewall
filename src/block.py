@@ -8,6 +8,9 @@ import sys
 from collections import defaultdict
 import subprocess
 import platform
+from dotenv import load_dotenv
+
+path = load_dotenv("CONFIG_PATH")
 
 class SystemFirewall:
     def __init__(self, config_file="firewall_config.json"):
