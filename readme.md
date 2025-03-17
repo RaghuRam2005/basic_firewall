@@ -86,7 +86,7 @@ exit
 ## Installation & Usage
 Ensure you have Python installed and run the script with administrator rights:
 ```bash
-python firewall.py
+python ./src/main.py
 ```
 
 For best performance, run the program in a terminal with elevated privileges.
