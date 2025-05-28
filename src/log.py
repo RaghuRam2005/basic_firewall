@@ -1,8 +1,9 @@
 import csv
 import datetime
-from dotenv import load_dotenv
+import os
 
-path = load_dotenv("LOG_PATH")
+base_path = os.path.dirname(os.path.abspath(__file__))
+path = os.path.join(base_path, "..", "/logs")
 
 class ConnectionLogger:
     def __init__(self):
