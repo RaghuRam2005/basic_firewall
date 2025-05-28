@@ -1,7 +1,9 @@
 __pycache__
 firewall_config.json
+config
 test.py
 src\connection_logs.csv
 logs\*
 logs
+env
 .env
